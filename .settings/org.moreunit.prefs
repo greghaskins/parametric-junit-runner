@@ -1,0 +1,4 @@
+eclipse.preferences.version=1
+org.moreunit.preferences.version=2
+org.moreunit.unitsourcefolder=parametric-junit-runner\:src/main/java\:parametric-junit-runner\:src/test/java
+org.moreunit.useprojectsettings=true
