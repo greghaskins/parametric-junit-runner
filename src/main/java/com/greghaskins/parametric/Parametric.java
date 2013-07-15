@@ -1,7 +1,10 @@
 package com.greghaskins.parametric;
 
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,36 +18,102 @@ public class Parametric extends Suite {
 		super(testClass, buildRunnersForClass(testClass));
 	}
 
-	private static <T> List<Runner> buildRunnersForClass(final Class<T> testClass) {
+	private static <T> List<Runner> buildRunnersForClass(final Class<T> testClass)
+			throws InitializationError {
 
-		final Method testCasesMethod;
-		try {
-			testCasesMethod = testClass.getMethod("getTestCases");
-			final Iterable<T> testCases = (Iterable<T>) testCasesMethod.invoke(null);
+		final Method testCasesMethod = findTestCasesMethod(testClass);
+		final Iterable<T> testCases = getTestCases(testCasesMethod);
 
-			final ArrayList<Runner> runners = new ArrayList<Runner>();
-			for (final T testCase : testCases) {
-
-				runners.add(new ParametricRunner<T>(testCase));
-			}
-			return runners;
-		} catch (final NoSuchMethodException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (final SecurityException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (final IllegalAccessException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (final IllegalArgumentException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (final InvocationTargetException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		final ArrayList<Runner> runners = new ArrayList<Runner>();
+		for (final T testCase : testCases) {
+			runners.add(new ParametricRunner<T>(testCase));
 		}
-		return null;
+		return runners;
+	}
+
+	private static <T> Method findTestCasesMethod(final Class<T> testClass)
+			throws InvalidParametricTestClassException {
+		for (final Method method : testClass.getMethods()) {
+			final TestCases annotation = method.getAnnotation(TestCases.class);
+			if (annotation != null) {
+				return method;
+			}
+		}
+
+		throw new InvalidParametricTestClassException(MessageFormat.format(
+				"No public method annotated with @TestCases in {0}", testClass.getName()));
+	}
+
+	private static <T> Iterable<T> getTestCases(final Method testCasesMethod)
+			throws InitializationError {
+		verifyMethodReturnsIterableOfCorrectType(testCasesMethod);
+		verifyMethodDoesNotAcceptAnyArguments(testCasesMethod);
+		verifyMethodIsStatic(testCasesMethod);
+
+		final Object testCasesAsObject;
+		try {
+			testCasesAsObject = testCasesMethod.invoke(null);
+		} catch (final Exception e) {
+			throw new InitializationError(e);
+		}
+
+		return convertReturnValueToIterable(testCasesMethod, testCasesAsObject);
+	}
+
+	private static void verifyMethodReturnsIterableOfCorrectType(final Method testCasesMethod)
+			throws InvalidParametricTestClassException {
+		final Class<?> returnType = testCasesMethod.getReturnType();
+		final Type genericReturnType = testCasesMethod.getGenericReturnType();
+		if (!Iterable.class.isAssignableFrom(returnType)
+				|| !(genericReturnType instanceof ParameterizedType)) {
+			throw invalidReturnTypeException(testCasesMethod);
+		}
+
+		final ParameterizedType parameterizedReturnType = (ParameterizedType) genericReturnType;
+		final Type[] typeArguments = parameterizedReturnType.getActualTypeArguments();
+
+		if (!typeArguments[0].equals(testCasesMethod.getDeclaringClass())) {
+			throw invalidReturnTypeException(testCasesMethod);
+		}
+	}
+
+	private static InvalidParametricTestClassException invalidReturnTypeException(
+			final Method testCasesMethod) {
+		final Class<?> testClass = testCasesMethod.getDeclaringClass();
+		return new InvalidParametricTestClassException(MessageFormat.format(
+				"@TestCases {0}.{1}() does not return an Iterable<{2}>", testClass.getName(),
+				testCasesMethod.getName(), testClass.getSimpleName()));
+	}
+
+	private static void verifyMethodDoesNotAcceptAnyArguments(final Method testCasesMethod)
+			throws InvalidParametricTestClassException {
+		if (testCasesMethod.getParameterTypes().length > 0) {
+			throw new InvalidParametricTestClassException(MessageFormat.format(
+					"@TestCases {0}.{1}() must not take any parameters", testCasesMethod
+							.getDeclaringClass().getName(), testCasesMethod.getName()));
+		}
+	}
+
+	private static void verifyMethodIsStatic(final Method testCasesMethod)
+			throws InvalidParametricTestClassException {
+		if (!Modifier.isStatic(testCasesMethod.getModifiers())) {
+			throw new InvalidParametricTestClassException(MessageFormat.format(
+					"@TestCases {0}.{1}() must be a static method", testCasesMethod
+							.getDeclaringClass().getName(), testCasesMethod.getName()));
+		}
+	}
+
+	private static <T> Iterable<T> convertReturnValueToIterable(final Method testCasesMethod,
+			final Object returnValueAsObject) throws InvalidParametricTestClassException {
+		if (returnValueAsObject == null) {
+			throw new InvalidParametricTestClassException(MessageFormat.format(
+					"{0}.{1}() returned a null Iterable", testCasesMethod.getDeclaringClass()
+							.getName(), testCasesMethod.getName()));
+		}
+
+		@SuppressWarnings("unchecked")
+		final Iterable<T> testCasesAsIterable = (Iterable<T>) returnValueAsObject;
+		return testCasesAsIterable;
 	}
 
 }
