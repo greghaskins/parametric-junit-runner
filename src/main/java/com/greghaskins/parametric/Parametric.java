@@ -20,28 +20,41 @@ public class Parametric extends Suite {
 
 	private static <T> List<Runner> buildRunnersForClass(final Class<T> testClass)
 			throws InitializationError {
-
-		final Method testCasesMethod = findTestCasesMethod(testClass);
-		final Iterable<T> testCases = getTestCases(testCasesMethod);
+		final List<Method> testCasesAnnotatedMethods = findTestCasesAnnotatedMethods(testClass);
 
 		final ArrayList<Runner> runners = new ArrayList<Runner>();
+		for (final Method testCasesMethod : testCasesAnnotatedMethods) {
+			runners.addAll(getTestCasesFromMethod(testCasesMethod));
+		}
+		return runners;
+	}
+
+	private static <T> List<Runner> getTestCasesFromMethod(final Method testCasesMethod)
+			throws InitializationError {
+		final ArrayList<Runner> runners = new ArrayList<Runner>();
+		final Iterable<T> testCases = getTestCases(testCasesMethod);
+
 		for (final T testCase : testCases) {
 			runners.add(new ParametricRunner<T>(testCase));
 		}
 		return runners;
 	}
 
-	private static <T> Method findTestCasesMethod(final Class<T> testClass)
+	private static <T> List<Method> findTestCasesAnnotatedMethods(final Class<T> testClass)
 			throws InvalidParametricTestClassException {
+		final ArrayList<Method> testCasesMethods = new ArrayList<Method>();
 		for (final Method method : testClass.getMethods()) {
 			final TestCases annotation = method.getAnnotation(TestCases.class);
 			if (annotation != null) {
-				return method;
+				testCasesMethods.add(method);
 			}
 		}
 
-		throw new InvalidParametricTestClassException(MessageFormat.format(
-				"No public method annotated with @TestCases in {0}", testClass.getName()));
+		if (testCasesMethods.isEmpty()) {
+			throw new InvalidParametricTestClassException(MessageFormat.format(
+					"No public methods annotated with @TestCases in {0}", testClass.getName()));
+		}
+		return testCasesMethods;
 	}
 
 	private static <T> Iterable<T> getTestCases(final Method testCasesMethod)

@@ -2,6 +2,7 @@ package com.greghaskins.parametric;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.typeCompatibleWith;
 
@@ -96,46 +97,6 @@ public class ParametricTest {
 			assertThat(childRunners, contains(parametricRunnersForTestCases(testCases)));
 		}
 
-		private static <T> List<Matcher<? super Runner>> parametricRunnersForTestCases(
-				final T[] testCases) {
-			final List<Matcher<? super Runner>> runnersForTestCases = new ArrayList<Matcher<? super Runner>>();
-			for (final T testCase : testCases) {
-				runnersForTestCases.add(parametricRunnerBuiltWithTestCase(testCase));
-			}
-			return runnersForTestCases;
-		}
-
-		private static List<Runner> constructRunnerAndGetChildren(final Class<?> testClass)
-				throws InitializationError {
-			final List<Runner> runners = new ArrayList<Runner>();
-			new Parametric(testClass) {
-				{
-					runners.addAll(getChildren());
-				}
-			};
-			return runners;
-		}
-
-		private static Matcher<Runner> parametricRunnerBuiltWithTestCase(
-				final Object expectedTestCase) {
-
-			return new TypeSafeDiagnosingMatcher<Runner>(ParametricRunner.class) {
-
-				public void describeTo(final Description description) {
-					description.appendText("ParametricRunner for ").appendValue(expectedTestCase);
-				}
-
-				@Override
-				protected boolean matchesSafely(final Runner runner,
-						final Description mismatchDescription) {
-					final Object actualTestCase = ((ParametricRunner<?>) runner).getTestCase();
-					mismatchDescription.appendText("ParametricRunner for ").appendValue(
-							actualTestCase);
-					return (actualTestCase != null) && (actualTestCase.equals(expectedTestCase));
-				}
-
-			};
-		}
 	}
 
 	public static class WhenThereIsNoPublicTestCasesAnnotation {
@@ -155,7 +116,7 @@ public class ParametricTest {
 		public void testThrowsInvalidParametricTestClassExceptionWhenNoMethodHasTestCasesMethod()
 				throws Exception {
 			this.exception.expect(invalidTestClassExceptionWithMessage(MessageFormat.format(
-					"No public method annotated with @TestCases in {0}",
+					"No public methods annotated with @TestCases in {0}",
 					SomeClassWithoutTestCasesAnnotation.class.getName())));
 			new Parametric(SomeClassWithoutTestCasesAnnotation.class);
 		}
@@ -172,10 +133,87 @@ public class ParametricTest {
 		public void testThrowsInvalidParametricTestClassExceptionWhenTestCasesMethodIsPrivate()
 				throws Exception {
 			this.exception.expect(invalidTestClassExceptionWithMessage(MessageFormat.format(
-					"No public method annotated with @TestCases in {0}",
+					"No public methods annotated with @TestCases in {0}",
 					SomeClassWithPrivateTestCasesAnnotation.class.getName())));
 			new Parametric(SomeClassWithPrivateTestCasesAnnotation.class);
 		}
+	}
+
+	public static class WhenThereAreMultipleTestCasesMethods {
+
+		private static class TestClassWithMultipleTestCasesMethods {
+
+			private static Iterable<TestClassWithMultipleTestCasesMethods> testCases1 = Collections
+					.emptyList();
+			private static Iterable<TestClassWithMultipleTestCasesMethods> testCases2 = Collections
+					.emptyList();
+
+			@TestCases
+			public static Iterable<TestClassWithMultipleTestCasesMethods> testCases1() {
+				return testCases1;
+			}
+
+			@TestCases
+			public static Iterable<TestClassWithMultipleTestCasesMethods> testCases2() {
+				return testCases2;
+			}
+		}
+
+		@Test
+		public void testAggregatesCasesFromAllAnnotatedTestCasesMethods() throws Exception {
+			final TestClassWithMultipleTestCasesMethods[] allCases = new TestClassWithMultipleTestCasesMethods[] {
+					new TestClassWithMultipleTestCasesMethods(),
+					new TestClassWithMultipleTestCasesMethods(),
+					new TestClassWithMultipleTestCasesMethods(),
+					new TestClassWithMultipleTestCasesMethods(),
+					new TestClassWithMultipleTestCasesMethods() };
+			TestClassWithMultipleTestCasesMethods.testCases1 = Arrays.asList(allCases[0],
+					allCases[1], allCases[2]);
+			TestClassWithMultipleTestCasesMethods.testCases2 = Arrays.asList(allCases[3],
+					allCases[4]);
+
+			final List<Runner> childRunners = constructRunnerAndGetChildren(TestClassWithMultipleTestCasesMethods.class);
+			assertThat(childRunners, containsInAnyOrder(parametricRunnersForTestCases(allCases)));
+		}
+	}
+
+	private static List<Runner> constructRunnerAndGetChildren(final Class<?> testClass)
+			throws InitializationError {
+		final List<Runner> runners = new ArrayList<Runner>();
+		new Parametric(testClass) {
+			{
+				runners.addAll(getChildren());
+			}
+		};
+		return runners;
+	}
+
+	private static <T> List<Matcher<? super Runner>> parametricRunnersForTestCases(
+			final T[] testCases) {
+		final List<Matcher<? super Runner>> runnersForTestCases = new ArrayList<Matcher<? super Runner>>();
+		for (final T testCase : testCases) {
+			runnersForTestCases.add(parametricRunnerBuiltWithTestCase(testCase));
+		}
+		return runnersForTestCases;
+	}
+
+	private static Matcher<Runner> parametricRunnerBuiltWithTestCase(final Object expectedTestCase) {
+
+		return new TypeSafeDiagnosingMatcher<Runner>(ParametricRunner.class) {
+
+			public void describeTo(final Description description) {
+				description.appendText("ParametricRunner for ").appendValue(expectedTestCase);
+			}
+
+			@Override
+			protected boolean matchesSafely(final Runner runner,
+					final Description mismatchDescription) {
+				final Object actualTestCase = ((ParametricRunner<?>) runner).getTestCase();
+				mismatchDescription.appendText("ParametricRunner for ").appendValue(actualTestCase);
+				return (actualTestCase != null) && (actualTestCase.equals(expectedTestCase));
+			}
+
+		};
 	}
 
 	public static class WhenTestCasesMethodReturnsNull {
