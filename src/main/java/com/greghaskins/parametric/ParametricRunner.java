@@ -1,15 +1,26 @@
 package com.greghaskins.parametric;
 
-import org.junit.runner.Description;
-import org.junit.runner.Runner;
-import org.junit.runner.notification.RunNotifier;
+import java.util.List;
 
-class ParametricRunner<T> extends Runner {
+import org.junit.runners.BlockJUnit4ClassRunner;
+import org.junit.runners.model.FrameworkMethod;
+import org.junit.runners.model.InitializationError;
+
+class ParametricRunner<T> extends BlockJUnit4ClassRunner {
 
 	private final T testCase;
 
-	ParametricRunner(final T testCase) {
+	ParametricRunner(final T testCase) throws InitializationError {
+		super(getTestClass(testCase));
 		this.testCase = testCase;
+	}
+
+	private static Class<? extends Object> getTestClass(final Object testCase)
+			throws InvalidParametricTestClassException {
+		if (testCase != null) {
+			return testCase.getClass();
+		}
+		throw new InvalidParametricTestClassException("Test case instances may not be null");
 	}
 
 	T getTestCase() {
@@ -17,14 +28,22 @@ class ParametricRunner<T> extends Runner {
 	}
 
 	@Override
-	public Description getDescription() {
-		// TODO Auto-generated method stub
-		return null;
+	protected Object createTest() throws Exception {
+		return this.testCase;
 	}
 
 	@Override
-	public void run(final RunNotifier notifier) {
-		// TODO Auto-generated method stub
+	protected void validateConstructor(final List<Throwable> errors) {
+	}
+
+	@Override
+	protected String getName() {
+		return "[" + this.testCase.toString() + "]";
+	}
+
+	@Override
+	protected String testName(final FrameworkMethod method) {
+		return method.getName() + getName();
 	}
 
 }

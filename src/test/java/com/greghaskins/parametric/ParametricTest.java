@@ -18,6 +18,7 @@ import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -32,7 +33,8 @@ public class ParametricTest {
 
 	public static class WhenEverythingIsSetUpCorrectly {
 
-		private static class MockParametricTestClass {
+		@Ignore
+		public static class MockParametricTestClass {
 
 			private static Iterable<MockParametricTestClass> testCases = Collections.emptyList();
 
@@ -40,9 +42,14 @@ public class ParametricTest {
 			public static Iterable<MockParametricTestClass> getTestCases() {
 				return testCases;
 			}
+
+			@Test
+			public void someTestMethod() {
+			}
 		}
 
-		private static class AnotherMockParametricTestClass {
+		@Ignore
+		public static class AnotherMockParametricTestClass {
 
 			private static Iterable<AnotherMockParametricTestClass> testCases = Collections
 					.emptyList();
@@ -50,6 +57,10 @@ public class ParametricTest {
 			@TestCases
 			public static Iterable<AnotherMockParametricTestClass> testCasesMethodWithSomeOtherName() {
 				return testCases;
+			}
+
+			@Test
+			public void someTestMethod() {
 			}
 		}
 
@@ -115,9 +126,9 @@ public class ParametricTest {
 		@Test
 		public void testThrowsInvalidParametricTestClassExceptionWhenNoMethodHasTestCasesMethod()
 				throws Exception {
-			this.exception.expect(invalidTestClassExceptionWithMessage(MessageFormat.format(
-					"No public methods annotated with @TestCases in {0}",
-					SomeClassWithoutTestCasesAnnotation.class.getName())));
+			this.exception.expect(Matchers.invalidTestClassExceptionWithMessage(MessageFormat
+					.format("No public methods annotated with @TestCases in {0}",
+							SomeClassWithoutTestCasesAnnotation.class.getName())));
 			new Parametric(SomeClassWithoutTestCasesAnnotation.class);
 		}
 
@@ -132,16 +143,17 @@ public class ParametricTest {
 		@Test
 		public void testThrowsInvalidParametricTestClassExceptionWhenTestCasesMethodIsPrivate()
 				throws Exception {
-			this.exception.expect(invalidTestClassExceptionWithMessage(MessageFormat.format(
-					"No public methods annotated with @TestCases in {0}",
-					SomeClassWithPrivateTestCasesAnnotation.class.getName())));
+			this.exception.expect(Matchers.invalidTestClassExceptionWithMessage(MessageFormat
+					.format("No public methods annotated with @TestCases in {0}",
+							SomeClassWithPrivateTestCasesAnnotation.class.getName())));
 			new Parametric(SomeClassWithPrivateTestCasesAnnotation.class);
 		}
 	}
 
 	public static class WhenThereAreMultipleTestCasesMethods {
 
-		private static class TestClassWithMultipleTestCasesMethods {
+		@Ignore
+		public static class TestClassWithMultipleTestCasesMethods {
 
 			private static Iterable<TestClassWithMultipleTestCasesMethods> testCases1 = Collections
 					.emptyList();
@@ -156,6 +168,10 @@ public class ParametricTest {
 			@TestCases
 			public static Iterable<TestClassWithMultipleTestCasesMethods> testCases2() {
 				return testCases2;
+			}
+
+			@Test
+			public void someTest() {
 			}
 		}
 
@@ -232,9 +248,9 @@ public class ParametricTest {
 		@Test
 		public void testThrowsInvalidParametricTestClassExceptionWhenNoMethodHasTestCasesAnnotation()
 				throws Exception {
-			this.exception.expect(invalidTestClassExceptionWithMessage(MessageFormat.format(
-					"{0}.testCases() returned a null Iterable",
-					SomeClassWithoutNullListOfTestCases.class.getName())));
+			this.exception.expect(Matchers.invalidTestClassExceptionWithMessage(MessageFormat
+					.format("{0}.testCases() returned a null Iterable",
+							SomeClassWithoutNullListOfTestCases.class.getName())));
 			new Parametric(SomeClassWithoutNullListOfTestCases.class);
 		}
 	}
@@ -256,9 +272,8 @@ public class ParametricTest {
 		@Test
 		public void testThrowsInvalidParametricTestClassExceptionWhenTestCasesMethodReturnsWrongType()
 				throws Exception {
-			this.exception
-					.expect(invalidTestClassExceptionWithMessage(MessageFormat.format(
-							"@TestCases {0}.{1}() does not return an Iterable<{2}>",
+			this.exception.expect(Matchers.invalidTestClassExceptionWithMessage(MessageFormat
+					.format("@TestCases {0}.{1}() does not return an Iterable<{2}>",
 							this.testClass.getName(), this.testMethodName,
 							this.testClass.getSimpleName())));
 			new Parametric(this.testClass);
@@ -319,9 +334,10 @@ public class ParametricTest {
 		@Test
 		public void testThrowsInvalidParametricTestClassExceptionWhenTestCasesMethodReturnsWrongType()
 				throws Exception {
-			this.exception.expect(invalidTestClassExceptionWithMessage(MessageFormat.format(
-					"@TestCases {0}.{1}() must not take any parameters", this.testClass.getName(),
-					this.testMethodName, this.testClass.getSimpleName())));
+			this.exception.expect(Matchers.invalidTestClassExceptionWithMessage(MessageFormat
+					.format("@TestCases {0}.{1}() must not take any parameters",
+							this.testClass.getName(), this.testMethodName,
+							this.testClass.getSimpleName())));
 			new Parametric(this.testClass);
 		}
 
@@ -396,9 +412,9 @@ public class ParametricTest {
 
 		@Test
 		public void testThrowsRuntimeExceptionWhenUnableToInvokeTestCasesMethod() throws Exception {
-			this.exception.expect(invalidTestClassExceptionWithMessage(MessageFormat.format(
-					"@TestCases {0}.testCases() must be a static method",
-					TestClassWithNonStaticTestCasesMethod.class.getName())));
+			this.exception.expect(Matchers.invalidTestClassExceptionWithMessage(MessageFormat
+					.format("@TestCases {0}.testCases() must be a static method",
+							TestClassWithNonStaticTestCasesMethod.class.getName())));
 			new Parametric(TestClassWithNonStaticTestCasesMethod.class);
 		}
 
@@ -410,26 +426,6 @@ public class ParametricTest {
 			}
 
 		}
-
-	}
-
-	private static Matcher<? extends InitializationError> invalidTestClassExceptionWithMessage(
-			final String message) {
-		return new TypeSafeDiagnosingMatcher<InitializationError>(
-				InvalidParametricTestClassException.class) {
-
-			public void describeTo(final Description description) {
-				description.appendValue(new InvalidParametricTestClassException(message));
-			}
-
-			@Override
-			protected boolean matchesSafely(final InitializationError item,
-					final Description mismatchDescription) {
-				final InvalidParametricTestClassException exception = (InvalidParametricTestClassException) item;
-				mismatchDescription.appendText(exception.toString());
-				return message.equals(item.getCauses().get(0).getMessage());
-			}
-		};
 
 	}
 
