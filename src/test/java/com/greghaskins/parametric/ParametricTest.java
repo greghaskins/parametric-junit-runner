@@ -21,6 +21,7 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.experimental.runners.Enclosed;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runner.Runner;
@@ -29,6 +30,7 @@ import org.junit.runners.Parameterized.Parameters;
 import org.junit.runners.Suite;
 import org.junit.runners.model.InitializationError;
 
+@RunWith(Enclosed.class)
 public class ParametricTest {
 
 	public static class WhenEverythingIsSetUpCorrectly {
