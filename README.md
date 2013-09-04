@@ -81,6 +81,6 @@ Unless you are accustomed to reading code that reflectively provides method para
 To-Do
 -----
 
-- [ ] Compile-time, inline warnings and errors for invalid `Parametric` test classes
-- [ ] Fix `@BeforeClass` and `@AfterClass` so they are not executed for each test case
-- [ ] A more explicit way to provide the test case name than overriding `toString()`
+- Compile-time, inline warnings and errors for invalid `Parametric` test classes
+- Fix `@BeforeClass` and `@AfterClass` so they are not executed for each test case
+- A more explicit way to provide the test case name than overriding `toString()`
