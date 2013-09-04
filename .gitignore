@@ -5,3 +5,5 @@ target/
 *.jar
 *.war
 *.ear
+
+*.md.html
